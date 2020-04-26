@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/home/siddhant.b/miniconda3/envs/corona/bin/python
 import numpy as np
 import pandas as pd
 from csv import reader
@@ -11,6 +11,7 @@ import argparse
 import sys
 import json
 import ssl
+import pdb
 import urllib.request
 
 
@@ -148,6 +149,7 @@ class Learner(object):
         self.s_0 = s_0
         self.i_0 = i_0
         self.r_0 = r_0
+        print('[INFO] Learning for {}, start date is {}'.format(self.country, self.start_date))
 
 
     def load_confirmed(self, country):
@@ -176,14 +178,15 @@ class Learner(object):
             values = np.append(values, datetime.strftime(current, '%m/%d/%y'))
         return values
 
-    def predict(self, beta, gamma, data, recovered, death, country, s_0, i_0, r_0):
+    def predict(self, beta, gamma, zeeta, data, recovered, death, country, s_0, i_0, r_0):
         new_index = self.extend_index(data.index, self.predict_range)
         size = len(new_index)
         def SIR(t, y):
             S = y[0]
             I = y[1]
             R = y[2]
-            return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
+            N = S + I + R
+            return [-(beta*S*I)/N + zeeta*R, (beta*S*I)/N-gamma*I, gamma*I - zeeta*R]
         extended_actual = np.concatenate((data.values, [None] * (size - len(data.values))))
         extended_recovered = np.concatenate((recovered.values, [None] * (size - len(recovered.values))))
         extended_death = np.concatenate((death.values, [None] * (size - len(death.values))))
@@ -194,27 +197,35 @@ class Learner(object):
         recovered = self.load_recovered(self.country)
         death = self.load_dead(self.country)
         data = (self.load_confirmed(self.country) - recovered - death)
-        
-        optimal = minimize(loss, [0.001, 0.001], args=(data, recovered, self.s_0, self.i_0, self.r_0), method='L-BFGS-B', bounds=[(0.00000001, 0.4), (0.00000001, 0.4)])
+        print('[INFO] Starting optimisation!')
+        optimal = minimize(loss, [0.001, 0.001, 0.001], args=(data, recovered, self.s_0, self.i_0, self.r_0), method='L-BFGS-B', bounds=[(0.00000001, 0.4), (0.00000001, 0.4), (0.00000001, 0.4)])                
+        print('[INFO] Optimisation done!')
         print(optimal)
-        beta, gamma = optimal.x
-        new_index, extended_actual, extended_recovered, extended_death, prediction = self.predict(beta, gamma, data, recovered, death, self.country, self.s_0, self.i_0, self.r_0)
+        beta, gamma, zeeta = optimal.x
+        new_index, extended_actual, extended_recovered, extended_death, prediction = self.predict(beta, gamma, zeeta, data, recovered, death, self.country, self.s_0, self.i_0, self.r_0)
         df = pd.DataFrame({'Infected data': extended_actual, 'Recovered data': extended_recovered, 'Death data': extended_death, 'Susceptible': prediction.y[0], 'Infected': prediction.y[1], 'Recovered': prediction.y[2]}, index=new_index)
-        fig, ax = plt.subplots(figsize=(15, 10))
-        ax.set_title(self.country)
+        fig, ax = plt.subplots(figsize=(15/3, 10/3 + 1))
+        ax.set_title('SIRS Model Predictions for ' + self.country, fontsize=12)
+        ax.set_xlabel('Number of days from 22nd Jan 2020', fontsize=9)
+        ax.set_ylabel('Number of people', fontsize=9)
+        df = df.reset_index()
+        df = df.drop(columns=['index'])
         df.plot(ax=ax)
-        print(f"country={self.country}, beta={beta:.8f}, gamma={gamma:.8f}, r_0:{(beta/gamma):.8f}")
-        fig.savefig(f"{self.country}.png")
+        with open('images/SIRS/{}_300.txt'.format(self.country), 'w') as file:
+            file.write(f"country={self.country}, beta={beta:.8f}, gamma={gamma:.8f}, r_0:{(beta/gamma):.8f}, z:{zeeta:.8f}")
+        print(f"country={self.country}, beta={beta:.8f}, gamma={gamma:.8f}, r_0:{(beta/gamma):.8f}, z:{zeeta:.8f}")
+        fig.savefig(f"images/SIRS/{self.country}_300.png")
 
 
 def loss(point, data, recovered, s_0, i_0, r_0):
     size = len(data)
-    beta, gamma = point
+    beta, gamma, zeeta = point
     def SIR(t, y):
         S = y[0]
         I = y[1]
         R = y[2]
-        return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
+        N = S + I + R
+        return [-(beta*S*I)/N + zeeta*R, (beta*S*I)/N-gamma*I, gamma*I - zeeta*R]
     solution = solve_ivp(SIR, [0, size], [s_0,i_0,r_0], t_eval=np.arange(0, size, 1), vectorized=True)
     l1 = np.sqrt(np.mean((solution.y[1] - data)**2))
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))
