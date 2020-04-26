@@ -1,0 +1,1 @@
+country=Pakistan, beta=0.39833847, gamma=0.34180158, r_0:1.16540850

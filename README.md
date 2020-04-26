@@ -1,9 +1,9 @@
 # COVID-19 SIR Model Estimation
-SIR model estimation on COVID-19 cases dataset. There is a blog post describing the detail of the SIR model and COVID-19 cases dataset.
+SIR and SIRS modelS estimation on COVID-19 cases dataset. There is a blog post describing the detail of the SIR model and COVID-19 cases dataset.
 
 - [https://www.lewuathe.com/covid-19-dynamics-with-sir-model.html](https://www.lewuathe.com/covid-19-dynamics-with-sir-model.html)
 
-![japan](/Japan.png)
+![main](images/China_INdia.png)
 
 ## Usage
 
@@ -43,3 +43,6 @@ The data used by this simulation is available in:
 
 - [CSSEGISandData/COVID-19](https://github.com/CSSEGISandData/COVID-19)
 
+## Orignial Repository Link
+
+- [Lewuathe/COVID19-SIR](https://github.com/Lewuathe/COVID19-SIR)

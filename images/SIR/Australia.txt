@@ -1,0 +1,1 @@
+country=Australia, beta=0.15392676, gamma=0.06542205, r_0:2.35282689

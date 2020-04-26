@@ -1,0 +1,1 @@
+country=Germany, beta=0.23005106, gamma=0.06614804, r_0:3.47782138
